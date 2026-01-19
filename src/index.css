@@ -80,6 +80,6 @@ body {
   align-items: center;
 }
 
-.play-btn {
-  
+.mediaControl-btn {
+  cursor: pointer;
 }

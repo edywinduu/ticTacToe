@@ -6,10 +6,29 @@ function Square ({value, onSquareClick}){
   return <button className="square" onClick={onSquareClick}>{ value }</button>;
 }
 
-function NavigationBoard (){
+function NavigationBoard ({status, gameStatus, onPlay, onStop, onRestart}){
+  const mediaControl = ["play_arrow", "Stop", "Refresh"];
+
+  function mediaControlClick (){
+    switch(status){
+      case gameStatus.INIT:
+        onPlay();
+        break;
+      case gameStatus.PLAYING:
+        onStop();
+        break;
+      case gameStatus.FINISHED:
+        onRestart();
+        break;
+      default:
+        break;
+    }
+  }
+
+  const controlImage = status === gameStatus.INIT?0:status === gameStatus.PLAYING?1:2;
   return (
     <div className='navigation-board'>
-      <button className='play-btn'><span class="material-symbols-outlined">play_arrow</span></button>
+      <button className='mediaControl-btn' onClick={mediaControlClick}><span className="material-symbols-outlined">{mediaControl[controlImage]}</span></button>
       <button className='switch-btn'></button>
       <button className='backmove-btn'></button>
       <button className='frontmove-btn'></button>
@@ -17,11 +36,10 @@ function NavigationBoard (){
   )
 }
 
-function Board () {
-  const [roleIsNext, setRoleIsNext] = useState(true);
-  const [squares, setSquares] = useState(Array(9).fill(null));
+function Board ({status, squares, setSquares}) {
   
   function handleClick (i){
+    if (squares[i] || status == 0 || status == 2 || status || 3) return;
     const nextSquares = squares.slice();
     nextSquares[i] = "X";
     setSquares(nextSquares);
@@ -49,13 +67,28 @@ function Board () {
 }
 
 export default function Game (){
+  const gameStatus = {
+    INIT: 0, PLAYING: 1, STOPPED: 2, FINISHED: 3
+  }
+  const [status, setStatus] = useState(gameStatus.INIT);
+  const [squares, setSquares] = useState(Array(9).fill(null));
+
+    const handlePlay=()=>setStatus(gameStatus.PLAYING);
+    const handleStop=()=>setStatus(gameStatus.STOPPED);
+    const handleRestart=()=>{
+      setStatus(gameStatus.FINISHED);
+      setSquares(Array(9).fill(null));
+    }
   return (
     <div className='Game'>
       <div className='game-board'>
-        <Board />
+        <Board 
+        status={status}
+        squares={squares} 
+        setSquares={setSquares} />
       </div>
       <div className='game-navBoard'>
-        <NavigationBoard />
+        <NavigationBoard status={status} gameStatus={gameStatus} onPlay={handlePlay} onStop={handleStop} onRestart={handleRestart}/>
       </div>
     </div>
   )
