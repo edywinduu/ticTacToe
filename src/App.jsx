@@ -6,7 +6,7 @@ function Square ({value, onSquareClick}){
   return <button className="square" onClick={onSquareClick}>{ value }</button>;
 }
 
-function NavigationBoard ({status, gameStatus, xIsNext, switchPlayerClick, onPlay, onStop, onRestart, onModeClick, statusMode}){
+function NavigationBoard ({status, gameStatus, onPlay, onStop, onRestart, onModeClick, statusMode, switchButtonLogo, switchControl}){
   const mediaControl = ["play_arrow", "Stop", "Refresh"]; //media control googlefont
   const modeControl = ["Robot", "network_node"]; //mode control
 
@@ -20,7 +20,6 @@ function NavigationBoard ({status, gameStatus, xIsNext, switchPlayerClick, onPla
         break;
       case gameStatus.STOPPED:
         onRestart();
-        switchPlayerClick();
         break;
       case gameStatus.FINISHED:
         onPlay();
@@ -29,30 +28,17 @@ function NavigationBoard ({status, gameStatus, xIsNext, switchPlayerClick, onPla
     }
   }
 
-
-  function switchButton (){
-    if (status===gameStatus.PLAYING || status===gameStatus.STOPPED) return;
-    return xIsNext ? "X": "O";
-  }
-
   const controlImage = status === gameStatus.INIT || status === gameStatus.FINISHED ?0:status === gameStatus.PLAYING?1:2;
   return (
     <div className='navigation-board'>
       <button className='mediaControl-btn' onClick={mediaControlClick}><span className="material-symbols-outlined">{mediaControl[controlImage]}</span></button>
-      <button className='switch-btn' onClick={switchPlayerClick}>{switchButton()}</button>
+      <button className='switch-btn' onClick={switchControl}>{switchButtonLogo}</button>
       <button className='mode-btn' onClick={onModeClick}><span className="material-symbols-outlined">{modeControl[statusMode]}</span></button>
     </div>
   )
 }
 
-function Board ({status, xIsNext, setXIsNext, squares, setSquares, gameInformation, botAi, statusMode, gameModeStatus}) { //navbar 2
-
-  useEffect(() => {
-    if (statusMode === gameModeStatus.VSAI && status === 1 && !calculateWinner(squares) && !xIsNext) {
-      botAi();
-      setXIsNext(true);
-    }
-  }, [statusMode, !xIsNext, status, squares]);
+function Board ({status, xIsNext, setXIsNext, squares, setSquares, gameInformation, setIsTurn}) { //navbar 2
 
   function handleClick (i){
     if (squares[i] || status !== 1 || calculateWinner(squares)) return;
@@ -61,6 +47,7 @@ function Board ({status, xIsNext, setXIsNext, squares, setSquares, gameInformati
     nextSquares[i] = xIsNext ? "X": "O";
     setSquares(nextSquares);
     setXIsNext(prev => !prev);
+    setIsTurn(false);
   }
 
   return(
@@ -86,17 +73,19 @@ function Board ({status, xIsNext, setXIsNext, squares, setSquares, gameInformati
 }
 
 export default function Game (){
+  const [squares, setSquares] = useState(Array(9).fill(null)); //array on square
   const gameStatus = {
     INIT: 0, PLAYING: 1, STOPPED: 2, FINISHED: 3
   }
   const gameModeStatus = {
     VSAI: 0, LOCAL: 1
   }
-  const [status, setStatus] = useState(gameStatus.INIT); //game status
-  const [squares, setSquares] = useState(Array(9).fill(null)); //array on square
-  const [xIsNext, setXIsNext]= useState(true); //user mode
-  const [statusMode, setStatusMode] = useState(gameModeStatus.VSAI); //ai mode
+  const switchButtonControl = {
+    X: "X",O: "O"
+  }
+  const [switchButtonLogo, setSwitchButtonLogo] = useState(switchButtonControl.X);
 
+  const [status, setStatus] = useState(gameStatus.INIT); //game status
   const handlePlay=()=>setStatus(gameStatus.PLAYING);
   const handleStop=()=>{
     setStatus(gameStatus.STOPPED);
@@ -104,7 +93,10 @@ export default function Game (){
   const handleRestart=()=>{
     setStatus(gameStatus.FINISHED);
     setSquares(Array(9).fill(null));
+    setXIsNext(true);
   }
+  const [xIsNext, setXIsNext]= useState(true); //user mode
+  const [statusMode, setStatusMode] = useState(gameModeStatus.VSAI); //ai mode
 
   const modeButtonClick=()=>{
     if (status===gameStatus.PLAYING || status===gameStatus.STOPPED) return;
@@ -113,50 +105,68 @@ export default function Game (){
         ? gameModeStatus.LOCAL
         : gameModeStatus.VSAI
     );
-  }
-
-  const [switchPlayer, setSwitchPlayer] = useState(false);
-
-  function switchPlayerClick(){
-    if(status === gameStatus.PLAYING) return;
-    setXIsNext(prev => !prev);
+    setXIsNext(true);
   }
 
   const winner=calculateWinner(squares);
   const isBoardFull = !squares.includes(null); //pengecekan draw
 
-  
+  useEffect(() => {
+    if (winner) {
+      setStatus(gameStatus.STOPPED);
+    } else if (!squares.includes(null)) {
+      setStatus(gameStatus.STOPPED); // draw
+    }
+  }, [winner, squares]);
+
   function gameInformation(){
     const statusInformationMode = ["Vs.Ai", "Local"];
     if (status===gameStatus.INIT || status===gameStatus.FINISHED) return "Let's Play (" + statusInformationMode[statusMode] + ")";
     
     if (winner){
-      handleStop();
       return "Congrats " + winner + "-san";
     }
     if (isBoardFull) {
-      handleStop();
       return "Draw!";
-    } else {
-      return "Next Player: " + (xIsNext ? "'X'": "'O'"); 
+    } else { 
+      return "Next Player: " + (xIsNext ? "'X'": "'O'");
     }
   }
 
-  function botAi() {
+  const botAi = () => {
     const emptyIndexes = squares
-      .map((value, index) => (value === null ? index : null))
-      .filter(index => index !== null);
+      .map((val, idx) => (val === null ? idx : null))
+      .filter((val) => val !== null);
 
     if (emptyIndexes.length === 0) return;
 
-    const randomIndex =
-      emptyIndexes[Math.floor(Math.random() * emptyIndexes.length)];
+    // Pick random spot
+    const randomIndex = emptyIndexes[Math.floor(Math.random() * emptyIndexes.length)];
 
-    setSquares(prev => {
-      const next = [...prev];
-      next[randomIndex] = xIsNext ? "X" : "O";
-      return next;
+    // Update board with a slight delay for better UX
+    setTimeout(() => {
+      setSquares((prev) => {
+        const next = [...prev];
+        next[randomIndex] = xIsNext ? "X" : "O";
+        return next;
       });
+    }, 500);
+    setXIsNext(prev=>!prev);
+    setIsTurn(true);
+  };
+
+  const [isTurn, setIsTurn] = useState(true); //true = player, false = bot
+
+  useEffect(()=> {
+    if (!isTurn && statusMode===gameModeStatus.VSAI && status===gameStatus.PLAYING && !winner)
+    botAi();
+  }, [isTurn, winner, status]
+  );
+
+  function switchControl(){
+    if (status===gameStatus.PLAYING) return;
+    setSwitchButtonLogo(prev=>prev===switchButtonControl.X?switchButtonControl.O:switchButtonControl.X);
+    setIsTurn(switchButtonLogo===switchButtonControl.O);
   }
 
   return (
@@ -169,22 +179,21 @@ export default function Game (){
         squares={squares} 
         setSquares={setSquares}
         gameInformation={gameInformation}
-        botAi={botAi}
-        statusMode={statusMode}
-        gameModeStatus={gameModeStatus} />
+        setIsTurn={setIsTurn} />
       </div>
       <div className='game-navBoard'>
         <NavigationBoard 
         status={status} 
         gameStatus={gameStatus}
         xIsNext={xIsNext}
-        switchPlayerClick={switchPlayerClick}
         onPlay={handlePlay} 
         onStop={handleStop} 
         onRestart={handleRestart}
         onModeClick={modeButtonClick}
         statusMode={statusMode}
-        setStatusMode={setStatusMode}/>
+        setStatusMode={setStatusMode}
+        switchButtonLogo={switchButtonLogo}
+        switchControl={switchControl} />
       </div>
     </div>
   )
