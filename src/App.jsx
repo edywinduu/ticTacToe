@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.jsx'
 
 function Square ({value, onSquareClick}){
@@ -6,8 +6,10 @@ function Square ({value, onSquareClick}){
   return <button className="square" onClick={onSquareClick}>{ value }</button>;
 }
 
-function NavigationBoard ({status, gameStatus,xIsNext, setXIsNext, onPlay, onStop, onRestart}){
+function NavigationBoard ({status, gameStatus,xIsNext, setXIsNext, onPlay, onStop, onRestart, onModeClick, statusMode}){
   const mediaControl = ["play_arrow", "Stop", "Refresh"]; //media control googlefont
+  const modeControl = ["Robot", "network_node"]; //mode control
+
   function switchPlayerClick (){
     if(status === gameStatus.PLAYING) return;
     setXIsNext(prev => !prev);
@@ -37,21 +39,26 @@ function NavigationBoard ({status, gameStatus,xIsNext, setXIsNext, onPlay, onSto
     return xIsNext ? "X": "O";
   }
 
-
   const controlImage = status === gameStatus.INIT || status === gameStatus.FINISHED ?0:status === gameStatus.PLAYING?1:2;
   return (
     <div className='navigation-board'>
       <button className='mediaControl-btn' onClick={mediaControlClick}><span className="material-symbols-outlined">{mediaControl[controlImage]}</span></button>
       <button className='switch-btn' onClick={switchPlayerClick}>{switchButton()}</button>
-      <button className='mode-btn'></button>
+      <button className='mode-btn' onClick={onModeClick}><span className="material-symbols-outlined">{modeControl[statusMode]}</span></button>
     </div>
   )
 }
 
-function Board ({status, gameStatus, xIsNext, setXIsNext, squares, setSquares, gameInformation}) { //navbar 2
-  
+function Board ({status, xIsNext, setXIsNext, squares, setSquares, gameInformation, botAi, statusMode, gameModeStatus}) { //navbar 2
+
+  useEffect(() => {
+    if (statusMode === gameModeStatus.VSAI && !xIsNext && status === 1 && !calculateWinner(squares)) {
+      botAi();
+    }
+  }, [statusMode, xIsNext, status]);
+
   function handleClick (i){
-    if (squares[i] || status == 0 || status == 2 || status == 3 || calculateWinner(squares)) return;
+    if (squares[i] || status !== 1 || calculateWinner(squares)) return;
     const nextSquares = squares.slice();
     nextSquares[i] = xIsNext ? "X": "O";
     setSquares(nextSquares);
@@ -84,9 +91,13 @@ export default function Game (){
   const gameStatus = {
     INIT: 0, PLAYING: 1, STOPPED: 2, FINISHED: 3
   }
+  const gameModeStatus = {
+    VSAI: 0, LOCAL: 1
+  }
   const [status, setStatus] = useState(gameStatus.INIT); //game status
   const [squares, setSquares] = useState(Array(9).fill(null)); //array on square
   const [xIsNext, setXIsNext]= useState(true); //user mode
+  const [statusMode, setStatusMode] = useState(gameModeStatus.VSAI);
 
   const handlePlay=()=>setStatus(gameStatus.PLAYING);
   const handleStop=()=>{
@@ -97,22 +108,52 @@ export default function Game (){
     setSquares(Array(9).fill(null));
   }
 
+  const modeButtonClick=()=>{
+    if (status===gameStatus.PLAYING || status===gameStatus.STOPPED) return;
+    setStatusMode(prev =>
+      prev === gameModeStatus.VSAI
+        ? gameModeStatus.LOCAL
+        : gameModeStatus.VSAI
+    );
+  }
+
   const winner=calculateWinner(squares);
   const isBoardFull = !squares.includes(null); //pengecekan draw
 
   
   function gameInformation(){
-    if (status===gameStatus.INIT || status===gameStatus.FINISHED) return "Let's Play";
+    const statusInformationMode = ["Vs.Ai", "Local"];
+    if (status===gameStatus.INIT || status===gameStatus.FINISHED) return "Let's Play (" + statusInformationMode[statusMode] + ")";
     
     if (winner){
+      setStatus(gameStatus.STOPPED);
       return "Congrats " + winner + "-san";
-    } 
+    }
     if (isBoardFull) {
-      onStop();
+      handleStop();
       return "Draw!";
     } else {
       return "Next Player: " + (xIsNext ? "'X'": "'O'"); 
     }
+  }
+
+  function botAi() {
+    const emptyIndexes = squares
+      .map((value, index) => (value === null ? index : null))
+      .filter(index => index !== null);
+
+    if (emptyIndexes.length === 0) return;
+
+    const randomIndex =
+      emptyIndexes[Math.floor(Math.random() * emptyIndexes.length)];
+
+    setSquares(prev => {
+      const next = [...prev];
+      next[randomIndex] = xIsNext ? "X" : "O";
+      return next;
+      });
+
+    setXIsNext(prev => !prev);
   }
 
   return (
@@ -120,12 +161,14 @@ export default function Game (){
       <div className='game-board'>
         <Board 
         status={status}
-        gameStatus={gameStatus}
         xIsNext={xIsNext}
         setXIsNext={setXIsNext}
         squares={squares} 
         setSquares={setSquares}
-        gameInformation={gameInformation} />
+        gameInformation={gameInformation}
+        botAi={botAi}
+        statusMode={statusMode}
+        gameModeStatus={gameModeStatus} />
       </div>
       <div className='game-navBoard'>
         <NavigationBoard 
@@ -135,12 +178,14 @@ export default function Game (){
         setXIsNext={setXIsNext}
         onPlay={handlePlay} 
         onStop={handleStop} 
-        onRestart={handleRestart}/>
+        onRestart={handleRestart}
+        onModeClick={modeButtonClick}
+        statusMode={statusMode}
+        setStatusMode={setStatusMode}/>
       </div>
     </div>
   )
 }
-
 
 function calculateWinner (squares){
   const lines=[
