@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import './App.jsx'
 
 function Square ({value, onSquareClick}){
 
@@ -38,18 +37,19 @@ function NavigationBoard ({status, gameStatus, onPlay, onStop, onRestart, onMode
   )
 }
 
-function Board ({status, xIsNext, setXIsNext, squares, setSquares, gameInformation, setIsTurn}) { //navbar 2
+function Board ({status, xIsNext, setXIsNext, squares, setSquares, gameInformation, isTurn, setIsTurn, statusMode, gameModeStatus}) { //navbar 2
 
   function handleClick (i){
-    if (squares[i] || status !== 1 || calculateWinner(squares)) return;
+    if (squares[i] || status !== 1 || !isTurn) return;
     const nextSquares = squares.slice();
 
     nextSquares[i] = xIsNext ? "X": "O";
     setSquares(nextSquares);
     setXIsNext(prev => !prev);
-    setIsTurn(false);
+    if(statusMode===gameModeStatus.VSAI){
+      setIsTurn(prev=>!prev);
+    }
   }
-
   return(
     <div>
       <div className='gameInformation'>{gameInformation()}</div>
@@ -86,7 +86,11 @@ export default function Game (){
   const [switchButtonLogo, setSwitchButtonLogo] = useState(switchButtonControl.X);
 
   const [status, setStatus] = useState(gameStatus.INIT); //game status
-  const handlePlay=()=>setStatus(gameStatus.PLAYING);
+  const handlePlay=()=>{
+    setStatus(gameStatus.PLAYING);
+    winner=null;
+    setXIsNext(true);
+  }
   const handleStop=()=>{
     setStatus(gameStatus.STOPPED);
   }
@@ -108,7 +112,14 @@ export default function Game (){
     setXIsNext(true);
   }
 
-  const winner=calculateWinner(squares);
+  useEffect(()=>{
+    if(statusMode===gameModeStatus.LOCAL){
+      setSwitchButtonLogo(null);
+    }
+    else{setSwitchButtonLogo(switchButtonControl.X)}
+  }, [statusMode])
+
+  let winner=calculateWinner(squares);
   const isBoardFull = !squares.includes(null); //pengecekan draw
 
   useEffect(() => {
@@ -148,26 +159,38 @@ export default function Game (){
       setSquares((prev) => {
         const next = [...prev];
         next[randomIndex] = xIsNext ? "X" : "O";
+        setIsTurn(true);
         return next;
       });
     }, 500);
     setXIsNext(prev=>!prev);
-    setIsTurn(true);
   };
 
   const [isTurn, setIsTurn] = useState(true); //true = player, false = bot
 
   useEffect(()=> {
-    if (!isTurn && statusMode===gameModeStatus.VSAI && status===gameStatus.PLAYING && !winner)
-    botAi();
+    if(statusMode===gameModeStatus.LOCAL) setIsTurn(true);
+    if (!isTurn && statusMode===gameModeStatus.VSAI && status===gameStatus.PLAYING && !winner){
+      botAi();
+    }
   }, [isTurn, winner, status]
   );
 
   function switchControl(){
-    if (status===gameStatus.PLAYING) return;
+    if (status===gameStatus.PLAYING || statusMode===gameModeStatus.LOCAL) return;
     setSwitchButtonLogo(prev=>prev===switchButtonControl.X?switchButtonControl.O:switchButtonControl.X);
     setIsTurn(switchButtonLogo===switchButtonControl.O);
   }
+  useEffect(()=>{
+    if(status===gameStatus.PLAYING)return;
+    if(switchButtonLogo===switchButtonControl.X){
+      setIsTurn(true);
+    }
+    else{
+      setIsTurn(false);
+    }
+  }, [switchButtonLogo, status])
+  console.log(isTurn);
 
   return (
     <div className='Game'>
@@ -179,7 +202,11 @@ export default function Game (){
         squares={squares} 
         setSquares={setSquares}
         gameInformation={gameInformation}
-        setIsTurn={setIsTurn} />
+        isTurn={isTurn}
+        setIsTurn={setIsTurn}
+        winner={winner}
+        statusMode={statusMode}
+        gameModeStatus={gameModeStatus} />
       </div>
       <div className='game-navBoard'>
         <NavigationBoard 
