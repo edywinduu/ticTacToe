@@ -1,0 +1,12 @@
+.footer{
+    background: linear-gradient(to top, rgba(255, 255, 255, 20), rgba(255, 255, 255, 0));
+    height: 20px;
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.footer p{
+    font-weight: bold;
+}

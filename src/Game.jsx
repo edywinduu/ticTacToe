@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import './Game.css'
 
 function Square ({value, onSquareClick}){
 
@@ -51,8 +52,8 @@ function Board ({status, xIsNext, setXIsNext, squares, setSquares, gameInformati
     }
   }
   return(
-    <div>
-      <div className='gameInformation'>{gameInformation()}</div>
+    <div className='board'>
+      <p className='gameInformation'>{gameInformation()}</p>
       <div className="board-row">
         <Square value={squares[0]} onSquareClick={() => handleClick(0)}/>
         <Square value={squares[1]} onSquareClick={() => handleClick(1)}/>
@@ -193,7 +194,7 @@ export default function Game (){
   console.log(isTurn);
 
   return (
-    <div className='Game'>
+    <div className='game'>
       <div className='game-board'>
         <Board 
         status={status}

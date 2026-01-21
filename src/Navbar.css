@@ -1,20 +1,22 @@
-body {
-    margin: 0;
-    padding: 0;
+.navigation-bar {
+    background-color: black;
+    height: 64px;
+    display: flex;
+    align-items: center;
 }
 
-.navigation-bar {
-    background-color: orange;
-    width: auto;
-    height: 40px;
+.navbar-content{
+    width: 100%;
     display: flex;
-    flex-direction: column;
-    align-items: end;
+    justify-content: space-between;
+    align-items: center;          /* 🔥 konten center vertikal */
+    padding: 0 24px;
+    color: white;
 }
 
 .app-logo {
-    margin: 1px;
-    padding: 10px;
-    width: 30px;
-    height: 30px;
+    width: 100%;
+    height:48px;
+    width: auto;
+    mix-blend-mode: screen;
 }
